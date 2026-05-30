@@ -1,0 +1,27 @@
+# 매일 전체 빌드. 코드가 안 바뀌어도 원격 데이터(jaffle/택시/pokemon URL)가
+# 깨지거나 바뀌면 잡아낸다 (데이터 신선도/가용성 모니터링).
+name: dbt-nightly
+
+on:
+  schedule:
+    - cron: "0 18 * * *"   # 매일 18:00 UTC (KST 03:00)
+  workflow_dispatch:
+
+jobs:
+  full-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dbt-duckdb
+        run: |
+          uv venv
+          uv pip install dbt-duckdb
+
+      - name: dbt build (full)
+        run: uv run dbt build --profiles-dir .

@@ -1,6 +1,7 @@
-# analytics CI: push/PR마다 dbt build (SQL 빌드 + 데이터 테스트)를 돌린다.
-# DuckDB라 창고/시크릿 불필요 — seed(커밋된 CSV) + 원격 URL만으로 완결.
-# 데이터 테스트가 깨지면 이 체크가 빨개져서 머지를 막는다.
+# analytics CI (slim): DuckDB라 창고/시크릿 불필요.
+#  - PR     : main과 비교해 '바뀐 모델의 수직 슬라이스(조상+본인+자손)'만 빌드 (state:modified)
+#  - main push: 전체 빌드
+# 데이터 테스트가 깨지면 체크가 빨개져 머지를 막는다(branch protection).
 name: dbt-ci
 
 on:
@@ -13,16 +14,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # state 비교용 히스토리
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.12"
 
-      - name: Install dbt-duckdb (uv venv)
+      - name: Install dbt-duckdb
         run: |
           uv venv
           uv pip install dbt-duckdb
 
-      - name: dbt build (SQL 빌드 + 데이터 테스트)
+      # PR: main의 manifest를 만들어 비교 기준(state)으로 → 바뀐 부분만 빌드
+      - name: dbt build (PR — slim)
+        if: github.event_name == 'pull_request'
+        run: |
+          git worktree add /tmp/base "origin/${{ github.base_ref }}"
+          uv run dbt compile --project-dir /tmp/base --profiles-dir /tmp/base --target-path /tmp/base-target
+          echo "::group::변경 영향 모델"
+          uv run dbt ls --select state:modified+ --state /tmp/base-target --profiles-dir . || true
+          echo "::endgroup::"
+          uv run dbt build \
+            --select +state:modified+ \
+            --exclude mart_playground_summary \
+            --state /tmp/base-target \
+            --profiles-dir .
+
+      # main push: 전체 빌드
+      - name: dbt build (main — full)
+        if: github.event_name == 'push'
         run: uv run dbt build --profiles-dir .
