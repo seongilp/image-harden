@@ -6,7 +6,8 @@ MELANGE    := cgr.dev/chainguard/melange:latest
 APKO       := cgr.dev/chainguard/apko:latest
 NAIVE_IMG  := harden:naive
 WOLFI_IMG  := harden:wolfi
-REG        := localhost:5000
+# macOS는 5000을 AirPlay(ControlCenter)가 점유하므로 5050 사용
+REG        := localhost:5050
 REG_NAME   := harden-registry
 
 .PHONY: naive
@@ -33,3 +34,25 @@ image: pkg
 	@LOADED=$$(docker load -i harden-wolfi.tar | sed -n 's/.*Loaded image: //p'); \
 		docker tag $$LOADED $(WOLFI_IMG); \
 		echo "tagged $$LOADED as $(WOLFI_IMG)"
+
+.PHONY: registry
+registry:
+	@if [ "$$(docker inspect -f '{{.State.Running}}' $(REG_NAME) 2>/dev/null)" != "true" ]; then \
+		docker rm -f $(REG_NAME) >/dev/null 2>&1 || true; \
+		docker run -d -p 5050:5000 --restart=always --name $(REG_NAME) registry:2; \
+	fi
+	@echo "registry up at $(REG)"
+
+keys/cosign.key:
+	mkdir -p keys
+	cd keys && COSIGN_PASSWORD="" cosign generate-key-pair
+
+.PHONY: sign
+sign: image registry keys/cosign.key
+	docker tag $(WOLFI_IMG) $(REG)/harden:wolfi
+	docker push $(REG)/harden:wolfi
+	@DIGEST=$$(docker inspect --format='{{range .RepoDigests}}{{println .}}{{end}}' $(REG)/harden:wolfi | grep '^$(REG)/' | head -1); \
+		echo "signing $$DIGEST"; \
+		COSIGN_PASSWORD="" cosign sign --yes --key keys/cosign.key \
+			--use-signing-config=false --tlog-upload=false \
+			--allow-insecure-registry $$DIGEST
