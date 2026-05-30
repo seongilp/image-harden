@@ -1,0 +1,25 @@
+package:
+  name: hello-py
+  version: 1.0.0
+  epoch: 0
+  description: "minimal hardened python http server"
+  copyright:
+    - license: Apache-2.0
+
+environment:
+  contents:
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    repositories:
+      - https://packages.wolfi.dev/os
+    packages:
+      - busybox
+      - python-3.13
+      - py3.13-pip
+
+pipeline:
+  - runs: |
+      SP="${{targets.destdir}}/usr/lib/python3.13/site-packages"
+      mkdir -p "$SP" "${{targets.destdir}}/usr/bin"
+      python3.13 -m pip install --no-cache-dir --target="$SP" -r app-python/requirements.txt
+      install -m644 app-python/main.py "${{targets.destdir}}/usr/bin/hello-py"

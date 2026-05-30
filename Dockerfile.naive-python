@@ -1,0 +1,7 @@
+# 비교 기준점: 표준 python 베이스를 그대로 런타임에 사용
+FROM python:3.13
+WORKDIR /app
+COPY app-python/ ./
+RUN pip install --no-cache-dir -r requirements.txt
+EXPOSE 8080
+CMD ["python", "main.py"]
