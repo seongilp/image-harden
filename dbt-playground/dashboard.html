@@ -1,0 +1,142 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dbt 놀이터 대시보드</title>
+<style>
+  body{margin:0;background:#0d1117;color:#e6edf3;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:28px;margin:0 0 4px} .sub{color:#9aa7b4;margin:0 0 28px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{background:#161b22;border:1px solid #2d3543;border-radius:14px;padding:20px}
+  .card h3{margin:0 0 14px;font-size:16px} .card h3 span{color:#9aa7b4;font-weight:400;font-size:13px}
+  .cap{color:#9aa7b4;font-size:12px;margin:10px 0 0}
+</style></head><body><div class="wrap">
+<h1>dbt 놀이터 대시보드</h1>
+<p class="sub">6개 도메인 마트를 차트로. 같은 dbt 모델, 표 대신 그림.</p>
+
+<div class="grid">
+  <div class="card"><h3>🛡️ 이미지 HIGH/CRITICAL 취약점 <span>naive vs wolfi</span></h3>
+    <svg viewBox="0 0 520 248" width="100%" style="max-width:520px">
+<text x="142" y="30.0" text-anchor="end" fill="#cdd6df" font-size="13">go · naive</text>
+<rect x="150" y="10" width="136.4" height="30" rx="5" fill="#ff6b6b"/>
+<text x="294.4" y="30.0" fill="#e6edf3" font-size="13" font-weight="700">85</text>
+<text x="142" y="68.0" text-anchor="end" fill="#cdd6df" font-size="13">go · wolfi</text>
+<rect x="150" y="48" width="2.0" height="30" rx="5" fill="#3fb950"/>
+<text x="160.0" y="68.0" fill="#e6edf3" font-size="13" font-weight="700">0</text>
+<text x="142" y="106.0" text-anchor="end" fill="#cdd6df" font-size="13">java · naive</text>
+<rect x="150" y="86" width="12.8" height="30" rx="5" fill="#ff6b6b"/>
+<text x="170.8" y="106.0" fill="#e6edf3" font-size="13" font-weight="700">8</text>
+<text x="142" y="144.0" text-anchor="end" fill="#cdd6df" font-size="13">java · wolfi</text>
+<rect x="150" y="124" width="2.0" height="30" rx="5" fill="#3fb950"/>
+<text x="160.0" y="144.0" fill="#e6edf3" font-size="13" font-weight="700">0</text>
+<text x="142" y="182.0" text-anchor="end" fill="#cdd6df" font-size="13">python · naive</text>
+<rect x="150" y="162" width="300.0" height="30" rx="5" fill="#ff6b6b"/>
+<text x="458.0" y="182.0" fill="#e6edf3" font-size="13" font-weight="700">187</text>
+<text x="142" y="220.0" text-anchor="end" fill="#cdd6df" font-size="13">python · wolfi</text>
+<rect x="150" y="200" width="2.0" height="30" rx="5" fill="#3fb950"/>
+<text x="160.0" y="220.0" fill="#e6edf3" font-size="13" font-weight="700">0</text>
+</svg>
+    <p class="cap">빨강=naive · 초록=wolfi. wolfi는 전부 0.</p></div>
+
+  <div class="card"><h3>🏎️ F1 통산 포인트 TOP 8 <span>2010~2024</span></h3>
+    <svg viewBox="0 0 520 324" width="100%" style="max-width:520px">
+<text x="142" y="30.0" text-anchor="end" fill="#cdd6df" font-size="13">Lewis Hamilton</text>
+<rect x="150" y="10" width="300.0" height="30" rx="5" fill="#37c8ab"/>
+<text x="458.0" y="30.0" fill="#e6edf3" font-size="13" font-weight="700">4606</text>
+<text x="142" y="68.0" text-anchor="end" fill="#cdd6df" font-size="13">Max Verstappen</text>
+<rect x="150" y="48" width="197.0" height="30" rx="5" fill="#37c8ab"/>
+<text x="355.0" y="68.0" fill="#e6edf3" font-size="13" font-weight="700">3024</text>
+<text x="142" y="106.0" text-anchor="end" fill="#cdd6df" font-size="13">Sebastian Vettel</text>
+<rect x="150" y="86" width="193.6" height="30" rx="5" fill="#37c8ab"/>
+<text x="351.6" y="106.0" fill="#e6edf3" font-size="13" font-weight="700">2973</text>
+<text x="142" y="144.0" text-anchor="end" fill="#cdd6df" font-size="13">Valtteri Bottas</text>
+<rect x="150" y="124" width="117.0" height="30" rx="5" fill="#37c8ab"/>
+<text x="275.0" y="144.0" fill="#e6edf3" font-size="13" font-weight="700">1797</text>
+<text x="142" y="182.0" text-anchor="end" fill="#cdd6df" font-size="13">Fernando Alonso</text>
+<rect x="150" y="162" width="114.6" height="30" rx="5" fill="#37c8ab"/>
+<text x="272.6" y="182.0" fill="#e6edf3" font-size="13" font-weight="700">1760</text>
+<text x="142" y="220.0" text-anchor="end" fill="#cdd6df" font-size="13">Sergio Pérez</text>
+<rect x="150" y="200" width="106.7" height="30" rx="5" fill="#37c8ab"/>
+<text x="264.7" y="220.0" fill="#e6edf3" font-size="13" font-weight="700">1638</text>
+<text x="142" y="258.0" text-anchor="end" fill="#cdd6df" font-size="13">Nico Rosberg</text>
+<rect x="150" y="238" width="98.9" height="30" rx="5" fill="#37c8ab"/>
+<text x="256.9" y="258.0" fill="#e6edf3" font-size="13" font-weight="700">1519</text>
+<text x="142" y="296.0" text-anchor="end" fill="#cdd6df" font-size="13">Charles Leclerc</text>
+<rect x="150" y="276" width="93.1" height="30" rx="5" fill="#37c8ab"/>
+<text x="251.1" y="296.0" fill="#e6edf3" font-size="13" font-weight="700">1430</text>
+</svg></div>
+
+  <div class="card"><h3>⚡ Pokemon 주 타입별 평균 종족값 TOP 10</h3>
+    <svg viewBox="0 0 520 400" width="100%" style="max-width:520px">
+<text x="142" y="30.0" text-anchor="end" fill="#cdd6df" font-size="13">Dragon</text>
+<rect x="150" y="10" width="300.0" height="30" rx="5" fill="#e3b341"/>
+<text x="458.0" y="30.0" fill="#e6edf3" font-size="13" font-weight="700">550.5</text>
+<text x="142" y="68.0" text-anchor="end" fill="#cdd6df" font-size="13">Steel</text>
+<rect x="150" y="48" width="265.8" height="30" rx="5" fill="#e3b341"/>
+<text x="423.8" y="68.0" fill="#e6edf3" font-size="13" font-weight="700">487.7</text>
+<text x="142" y="106.0" text-anchor="end" fill="#cdd6df" font-size="13">Flying</text>
+<rect x="150" y="86" width="264.3" height="30" rx="5" fill="#e3b341"/>
+<text x="422.3" y="106.0" fill="#e6edf3" font-size="13" font-weight="700">485</text>
+<text x="142" y="144.0" text-anchor="end" fill="#cdd6df" font-size="13">Psychic</text>
+<rect x="150" y="124" width="259.3" height="30" rx="5" fill="#e3b341"/>
+<text x="417.3" y="144.0" fill="#e6edf3" font-size="13" font-weight="700">475.9</text>
+<text x="142" y="182.0" text-anchor="end" fill="#cdd6df" font-size="13">Fire</text>
+<rect x="150" y="162" width="249.6" height="30" rx="5" fill="#e3b341"/>
+<text x="407.6" y="182.0" fill="#e6edf3" font-size="13" font-weight="700">458.1</text>
+<text x="142" y="220.0" text-anchor="end" fill="#cdd6df" font-size="13">Rock</text>
+<rect x="150" y="200" width="247.3" height="30" rx="5" fill="#e3b341"/>
+<text x="405.3" y="220.0" fill="#e6edf3" font-size="13" font-weight="700">453.8</text>
+<text x="142" y="258.0" text-anchor="end" fill="#cdd6df" font-size="13">Dark</text>
+<rect x="150" y="238" width="242.9" height="30" rx="5" fill="#e3b341"/>
+<text x="400.9" y="258.0" fill="#e6edf3" font-size="13" font-weight="700">445.7</text>
+<text x="142" y="296.0" text-anchor="end" fill="#cdd6df" font-size="13">Electric</text>
+<rect x="150" y="276" width="241.6" height="30" rx="5" fill="#e3b341"/>
+<text x="399.6" y="296.0" fill="#e6edf3" font-size="13" font-weight="700">443.4</text>
+<text x="142" y="334.0" text-anchor="end" fill="#cdd6df" font-size="13">Ghost</text>
+<rect x="150" y="314" width="239.6" height="30" rx="5" fill="#e3b341"/>
+<text x="397.6" y="334.0" fill="#e6edf3" font-size="13" font-weight="700">439.6</text>
+<text x="142" y="372.0" text-anchor="end" fill="#cdd6df" font-size="13">Ground</text>
+<rect x="150" y="352" width="238.4" height="30" rx="5" fill="#e3b341"/>
+<text x="396.4" y="372.0" fill="#e6edf3" font-size="13" font-weight="700">437.5</text>
+</svg></div>
+
+  <div class="card"><h3>🚕 NYC 택시 시간대별 운행 수 <span>0~23시</span></h3>
+    <svg viewBox="0 0 560 200" width="100%" style="max-width:560px">
+<rect x="9.0" y="91.2" width="21.0" height="82.8" rx="2" fill="#37c8ab"/>
+<text x="19.5" y="190" text-anchor="middle" fill="#9aa7b4" font-size="11">0</text>
+<rect x="32.0" y="102.5" width="21.0" height="71.5" rx="2" fill="#37c8ab"/>
+<rect x="55.0" y="109.8" width="21.0" height="64.2" rx="2" fill="#37c8ab"/>
+<rect x="78.0" y="127.7" width="21.0" height="46.3" rx="2" fill="#37c8ab"/>
+<text x="88.5" y="190" text-anchor="middle" fill="#9aa7b4" font-size="11">3</text>
+<rect x="101.0" y="146.8" width="21.0" height="27.2" rx="2" fill="#37c8ab"/>
+<rect x="124.0" y="150.2" width="21.0" height="23.8" rx="2" fill="#37c8ab"/>
+<rect x="147.0" y="134.9" width="21.0" height="39.1" rx="2" fill="#37c8ab"/>
+<text x="157.5" y="190" text-anchor="middle" fill="#9aa7b4" font-size="11">6</text>
+<rect x="170.0" y="107.2" width="21.0" height="66.8" rx="2" fill="#37c8ab"/>
+<rect x="193.0" y="86.8" width="21.0" height="87.2" rx="2" fill="#37c8ab"/>
+<rect x="216.0" y="71.6" width="21.0" height="102.4" rx="2" fill="#37c8ab"/>
+<text x="226.5" y="190" text-anchor="middle" fill="#9aa7b4" font-size="11">9</text>
+<rect x="239.0" y="60.2" width="21.0" height="113.8" rx="2" fill="#37c8ab"/>
+<rect x="262.0" y="46.8" width="21.0" height="127.2" rx="2" fill="#37c8ab"/>
+<rect x="285.0" y="36.8" width="21.0" height="137.2" rx="2" fill="#37c8ab"/>
+<text x="295.5" y="190" text-anchor="middle" fill="#9aa7b4" font-size="11">12</text>
+<rect x="308.0" y="26.9" width="21.0" height="147.1" rx="2" fill="#37c8ab"/>
+<rect x="331.0" y="17.1" width="21.0" height="156.9" rx="2" fill="#37c8ab"/>
+<rect x="354.0" y="13.4" width="21.0" height="160.6" rx="2" fill="#37c8ab"/>
+<text x="364.5" y="190" text-anchor="middle" fill="#9aa7b4" font-size="11">15</text>
+<rect x="377.0" y="12.0" width="21.0" height="162.0" rx="2" fill="#37c8ab"/>
+<rect x="400.0" y="15.2" width="21.0" height="158.8" rx="2" fill="#37c8ab"/>
+<rect x="423.0" y="19.1" width="21.0" height="154.9" rx="2" fill="#37c8ab"/>
+<text x="433.5" y="190" text-anchor="middle" fill="#9aa7b4" font-size="11">18</text>
+<rect x="446.0" y="85.9" width="21.0" height="88.1" rx="2" fill="#37c8ab"/>
+<rect x="469.0" y="106.2" width="21.0" height="67.8" rx="2" fill="#37c8ab"/>
+<rect x="492.0" y="109.9" width="21.0" height="64.1" rx="2" fill="#37c8ab"/>
+<text x="502.5" y="190" text-anchor="middle" fill="#9aa7b4" font-size="11">21</text>
+<rect x="515.0" y="122.2" width="21.0" height="51.8" rx="2" fill="#37c8ab"/>
+<rect x="538.0" y="138.0" width="21.0" height="36.0" rx="2" fill="#37c8ab"/>
+</svg>
+    <p class="cap">오후(12~18시)에 운행 집중.</p></div>
+</div>
+
+</div></body></html>
