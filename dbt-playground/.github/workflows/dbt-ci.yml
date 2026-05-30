@@ -14,12 +14,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.12"
 
-      - name: Install dbt-duckdb
-        run: pip install dbt-duckdb
+      - name: Install dbt-duckdb (uv venv)
+        run: |
+          uv venv
+          uv pip install dbt-duckdb
 
       - name: dbt build (SQL 빌드 + 데이터 테스트)
-        run: dbt build --profiles-dir .
+        run: uv run dbt build --profiles-dir .
