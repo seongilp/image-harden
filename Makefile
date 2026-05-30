@@ -66,3 +66,7 @@ scan: naive image
 .PHONY: compare
 compare: naive image
 	./scripts/compare.sh
+
+.PHONY: verify
+verify: sign
+	./scripts/verify.sh
