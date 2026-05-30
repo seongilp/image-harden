@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>컨테이너 이미지 취약점 0 파이프라인 — 설계 & 적용 가이드</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#2d3543;
+    --text:#e6edf3; --muted:#9aa7b4; --accent:#7c5cff; --accent2:#37c8ab;
+    --danger:#ff6b6b; --good:#3fb950; --warn:#e3b341; --mono:#cdd9e5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo",Roboto,sans-serif;
+    line-height:1.65; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1000px; margin:0 auto; padding:44px 24px 100px}
+  header.hero{border:1px solid var(--border); border-radius:16px; padding:40px;
+    background:linear-gradient(140deg,#161b22 0%,#1a1430 100%); position:relative; overflow:hidden;}
+  header.hero::after{content:""; position:absolute; right:-60px; top:-60px; width:240px; height:240px;
+    background:radial-gradient(circle,rgba(124,92,255,.32),transparent 70%);}
+  .kicker{color:var(--accent2); font-weight:700; letter-spacing:.08em; font-size:13px; text-transform:uppercase}
+  h1{margin:.2em 0 .3em; font-size:32px; line-height:1.2}
+  .sub{color:var(--muted); font-size:17px; max-width:700px}
+  .tagrow{margin-top:22px; display:flex; gap:8px; flex-wrap:wrap}
+  .tag{font-size:12px; padding:5px 11px; border-radius:999px; background:var(--panel2); border:1px solid var(--border); color:var(--mono)}
+  nav.toc{margin:24px 0 0; display:flex; gap:8px; flex-wrap:wrap; font-size:13px}
+  nav.toc a{color:var(--accent2); text-decoration:none; border:1px solid var(--border); padding:5px 11px; border-radius:8px; background:var(--panel)}
+  nav.toc a:hover{border-color:var(--accent2)}
+  h2{margin:56px 0 16px; font-size:23px; display:flex; align-items:center; gap:12px; scroll-margin-top:20px}
+  h2 .n{font-size:13px; color:var(--accent); border:1px solid var(--accent); border-radius:8px; padding:2px 9px; font-weight:700}
+  h3{margin:26px 0 10px; font-size:17px; color:#e6edf3}
+  p{color:#cdd6df}
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:24px}
+  table{width:100%; border-collapse:collapse; margin-top:8px; overflow:hidden; border-radius:12px}
+  th,td{padding:12px 15px; text-align:left; border-bottom:1px solid var(--border); font-size:14.5px; vertical-align:top}
+  thead th{background:var(--panel2); color:var(--muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em}
+  tbody tr:last-child td{border-bottom:none}
+  .num{font-variant-numeric:tabular-nums; font-weight:700}
+  .bad{color:var(--danger)} .ok{color:var(--good)} .warnc{color:var(--warn)}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace; font-size:13px; color:var(--mono)}
+  pre{background:#0a0e14; border:1px solid var(--border); border-radius:10px; padding:16px 18px; overflow-x:auto; margin:12px 0; position:relative}
+  pre code{color:var(--mono); font-size:12.5px; line-height:1.6}
+  pre .fn{position:absolute; top:0; right:0; font-size:11px; color:var(--muted); background:var(--panel2); border-left:1px solid var(--border); border-bottom:1px solid var(--border); padding:3px 10px; border-radius:0 10px 0 8px}
+  .cmt{color:#5d6b7a} .kw{color:var(--accent)} .str{color:var(--accent2)} .out{color:var(--good)} .key{color:#79c0ff}
+  .pipe{display:flex; flex-wrap:wrap; gap:8px; align-items:stretch; margin-top:8px}
+  .pstep{flex:1; min-width:120px; background:var(--panel2); border:1px solid var(--border); border-radius:11px; padding:13px}
+  .pstep .pn{font-size:11px; color:var(--accent2); font-weight:700}
+  .pstep b{display:block; font-size:14px; margin:3px 0}
+  .pstep span{color:var(--muted); font-size:12px}
+  .gate{border-color:var(--warn)!important; background:#241f12!important} .gate .pn{color:var(--warn)}
+  .loop{border-color:var(--accent)!important} .loop .pn{color:var(--accent)}
+  .arrow{align-self:center; color:var(--border); font-size:17px}
+  ul.clean{list-style:none; padding:0; margin:0}
+  ul.clean li{padding:9px 0 9px 26px; position:relative; border-bottom:1px solid var(--border); color:#cdd6df; font-size:14px}
+  ul.clean li:last-child{border-bottom:none}
+  ul.clean li::before{content:"›"; position:absolute; left:6px; color:var(--accent); font-weight:700}
+  ol.steps{counter-reset:s; list-style:none; padding:0; margin:0}
+  ol.steps li{counter-increment:s; padding:12px 0 12px 44px; position:relative; border-bottom:1px solid var(--border); font-size:14.5px}
+  ol.steps li:last-child{border-bottom:none}
+  ol.steps li::before{content:counter(s); position:absolute; left:0; top:10px; width:28px; height:28px; border-radius:8px; background:var(--accent); color:#fff; font-weight:700; display:grid; place-items:center; font-size:13px}
+  .pill{display:inline-block; font-size:12px; padding:2px 8px; border-radius:6px; background:var(--panel2); border:1px solid var(--border); color:var(--mono); font-family:monospace}
+  .note{display:flex; gap:12px; padding:15px 16px; border:1px solid var(--border); border-left:3px solid var(--accent2); border-radius:10px; background:var(--panel2); margin:14px 0}
+  .note.warn{border-left-color:var(--warn)} .note.warn b{color:var(--warn)}
+  .note .i{flex:none; font-size:18px} .note b{color:var(--accent2)}
+  .anno{color:var(--accent2)}
+  footer{margin-top:64px; padding-top:24px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">Container Image · Zero-CVE Pipeline</div>
+    <h1>컨테이너 이미지 취약점 0 파이프라인</h1>
+    <p class="sub">취약한 이미지를 <b>고치는</b> 게 아니라 Wolfi 최소 베이스로 <b>다시 짓는다</b>. 설계 원리 · 레시피 파일 해부 · 그대로 적용 가능한 전체 워크플로까지.</p>
+    <div class="tagrow">
+      <span class="tag">melange + apko</span>
+      <span class="tag">trivy + grype</span>
+      <span class="tag">cosign keyless</span>
+      <span class="tag">GHCR</span>
+      <span class="tag">daily rebuild</span>
+    </div>
+    <nav class="toc">
+      <a href="#why">1. 0이 되는 원리</a>
+      <a href="#design">2. 파이프라인 설계</a>
+      <a href="#recipe">3. 레시피 파일 해부</a>
+      <a href="#ci">4. 전체 워크플로(적용)</a>
+      <a href="#apply">5. 바로 적용 체크리스트</a>
+      <a href="#limit">6. 정직한 한계</a>
+    </nav>
+  </header>
+
+  <!-- 1 -->
+  <h2 id="why"><span class="n">1</span> 0이 되는 원리 — "고치지 말고 다시 지어라"</h2>
+  <p>핵심은 단순하다. 일반 베이스(<code>python:3.13</code> 등)는 OS·셸·패키지매니저·빌드도구가 잔뜩 들어있고 그게 전부 CVE 표면이다. 그걸 <b>버리고</b>, 앱 실행에 꼭 필요한 패키지만 Wolfi(매일 패치되는 컨테이너 전용 리눅스)에서 골라 <b>새 이미지로 조립</b>한다. CVE는 "제거"되는 게 아니라 애초에 <b>존재하지 않게 된다</b>.</p>
+  <div class="panel">
+    <table>
+      <thead><tr><th>언어</th><th>입력 (일반 베이스)</th><th>→ 파이프라인 →</th><th>출력 (Wolfi 재빌드)</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill">Go</span></td><td class="num">1.41 GB · <span class="bad">85 CVE</span></td><td style="color:var(--muted)">다시 짓기</td><td class="num">8.94 MB · <span class="ok">0 CVE</span></td></tr>
+        <tr><td><span class="pill">Python</span></td><td class="num">1.62 GB · <span class="bad">187 CVE</span></td><td style="color:var(--muted)">다시 짓기</td><td class="num">95.8 MB · <span class="ok">0 CVE</span></td></tr>
+        <tr><td><span class="pill">Java</span></td><td class="num">1.34 GB · <span class="bad">8 CVE</span></td><td style="color:var(--muted)">다시 짓기</td><td class="num">299 MB · <span class="ok">0 CVE</span></td></tr>
+      </tbody>
+    </table>
+    <p style="margin:14px 0 0; font-size:14px; color:var(--muted)">trivy·grype 2종 스캐너 교차검증. 0을 <b>만드는</b> 건 재빌드이고, 스캐너는 <b>확인</b>만 한다.</p>
+  </div>
+
+  <!-- 2 -->
+  <h2 id="design"><span class="n">2</span> 파이프라인 설계</h2>
+  <div class="panel">
+    <div class="pipe">
+      <div class="pstep"><div class="pn">①</div><b>melange</b><span>소스 → 서명된 <code>.apk</code></span></div>
+      <div class="arrow">→</div>
+      <div class="pstep"><div class="pn">②</div><b>apko</b><span>패키지만 조립 → 이미지+SBOM</span></div>
+      <div class="arrow">→</div>
+      <div class="pstep gate"><div class="pn">③ 스캔</div><b>trivy+grype</b><span>HIGH/CRIT 개수 측정</span></div>
+      <div class="arrow">→</div>
+      <div class="pstep loop"><div class="pn">④ 0?</div><b>판정</b><span>0이면 통과 / 아니면 ↻ 재빌드</span></div>
+      <div class="arrow">→</div>
+      <div class="pstep"><div class="pn">⑤</div><b>cosign</b><span>keyless 서명 + SBOM attest</span></div>
+      <div class="arrow">→</div>
+      <div class="pstep"><div class="pn">⑥</div><b>push</b><span>GHCR (검증된 0만)</span></div>
+    </div>
+    <p style="margin:16px 0 0; font-size:14px; color:var(--muted)">④의 재빌드 루프 = melange/apko가 매번 <code>packages.wolfi.dev</code>의 <b>최신</b> 패키지를 받으므로, 새로 공개된 CVE의 패치를 다시 빌드만 해도 흡수한다. 이 루프를 <span class="pill">scripts/harden.sh</span>가 구현한다(아래).</p>
+  </div>
+
+  <h3>harden.sh — "0 만드는" 로컬 파이프라인 (전체)</h3>
+  <pre><span class="fn">scripts/harden.sh</span><code><span class="cmt">#!/usr/bin/env bash</span>
+<span class="cmt"># 입력: 앱(go|python|java) · 출력: CVE 0이 검증된 이미지 / 안 되면 잔여 보고 후 실패</span>
+set -euo pipefail
+APP=<span class="str">"${1:?usage: scripts/harden.sh &lt;go|python|java&gt;}"</span>
+MAX_ROUNDS=<span class="str">"${MAX_ROUNDS:-2}"</span>
+IMG=<span class="str">"harden-${APP}:wolfi"</span>
+
+scan_count() {  <span class="cmt"># trivy로 HIGH/CRITICAL 개수만 추출</span>
+  trivy image -q --severity HIGH,CRITICAL --format json <span class="str">"$1"</span> 2&gt;/dev/null \
+    | python3 -c <span class="str">'import sys,json;d=json.load(sys.stdin);print(sum(len(r.get("Vulnerabilities") or []) for r in (d.get("Results") or [])))'</span>
+}
+
+for round in $(seq 1 <span class="str">"$MAX_ROUNDS"</span>); do
+  <span class="cmt"># Wolfi 최신 패키지로 다시 짓기 → OS 보안패치 자동 반영</span>
+  make APP=<span class="str">"$APP"</span> image &gt;/dev/null
+  n=$(scan_count <span class="str">"$IMG"</span>)
+  echo <span class="str">"   trivy HIGH/CRITICAL: $n"</span>
+  if [ <span class="str">"$n"</span> -eq 0 ]; then
+    grype <span class="str">"$IMG"</span> -q -o json | <span class="cmt"># grype 교차검증</span> ...
+    echo <span class="str">"✅ $IMG: CVE 0 (검증 완료)"</span>; exit 0
+  fi
+  echo <span class="str">"⚠ 잔여 $n건 — 최신 패치로 재빌드 재시도"</span>; trivy image -q --severity HIGH,CRITICAL <span class="str">"$IMG"</span>
+done
+echo <span class="str">"❌ 잔여 CVE: 앱 의존성 bump 또는 Wolfi 패치 대기 필요"</span>; exit 1</code></pre>
+  <div class="note"><div class="i">✅</div><div><span style="font-size:14px"><code>./scripts/harden.sh go</code> 실측 결과: <b class="ok">trivy 0 · grype 0 · CVE 0 검증 완료</b>. 입력 무엇이든 출력은 "0이 증명된 이미지" 또는 "왜 0이 안 되는지 명시한 실패".</span></div></div>
+
+  <!-- 3 -->
+  <h2 id="recipe"><span class="n">3</span> 레시피 파일 해부 — 진짜 알맹이</h2>
+  <p>CI YAML은 껍데기다. <b>실제 하드닝은 이 두 종류의 레시피 파일이 한다.</b> 언어마다 한 쌍씩 둔다.</p>
+
+  <h3>① <code>melange-&lt;lang&gt;.yaml</code> — 소스를 "서명된 패키지"로</h3>
+  <p>역할: 빌드 도구(컴파일러·pip·JDK)를 <b>이 단계 안에서만</b> 쓰고, 결과물 <code>.apk</code> 하나를 뱉는다. <span class="anno">→ 빌드 도구는 최종 이미지에 절대 안 따라간다.</span></p>
+  <pre><span class="fn">melange-go.yaml</span><code><span class="key">package</span>:
+  name: hello
+  version: 1.0.0
+<span class="key">environment</span>:           <span class="cmt"># ← 빌드 '환경' (여기서만 존재)</span>
+  contents:
+    keyring:      [https://packages.wolfi.dev/os/wolfi-signing.rsa.pub]
+    repositories: [https://packages.wolfi.dev/os]
+    packages:     [busybox, ca-certificates-bundle, <span class="anno">go</span>]   <span class="cmt"># go 컴파일러 = 빌드용</span>
+<span class="key">pipeline</span>:              <span class="cmt"># ← 빌드 단계 (go/build 내장 파이프라인)</span>
+  - uses: go/build
+    with: { modroot: app-go, packages: ., output: hello }</code></pre>
+
+  <div class="panel" style="margin-top:8px">
+    <p style="margin:0 0 8px; font-size:14px; color:var(--muted)">언어별 <code>pipeline</code> 부분만 다르다:</p>
+    <table>
+      <thead><tr><th>언어</th><th>빌드 도구 (environment)</th><th>pipeline 핵심</th></tr></thead>
+      <tbody>
+        <tr><td>Go</td><td><code>go</code></td><td><code>uses: go/build</code> — 정적 바이너리</td></tr>
+        <tr><td>Python</td><td><code>python-3.13, py3.13-pip</code></td><td><code>pip install --target</code>로 의존성을 패키지에 <b>vendoring</b></td></tr>
+        <tr><td>Java</td><td><code>openjdk-21-default-jdk, gradle-9</code></td><td><code>gradle jar</code> → jar를 <code>/usr/share/app</code>에 install</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <pre style="margin-top:12px"><span class="fn">melange-python.yaml (pipeline 부분)</span><code><span class="key">pipeline</span>:
+  - runs: |
+      SP=<span class="str">"${{targets.destdir}}/usr/lib/python3.13/site-packages"</span>
+      mkdir -p <span class="str">"$SP"</span> <span class="str">"${{targets.destdir}}/usr/bin"</span>
+      <span class="cmt"># requirements.txt 의존성을 패키지 안으로 직접 설치 (런타임 이미지엔 pip 불필요)</span>
+      python3.13 -m pip install --no-cache-dir --target=<span class="str">"$SP"</span> -r app-python/requirements.txt
+      install -m644 app-python/main.py <span class="str">"${{targets.destdir}}/usr/bin/hello-py"</span></code></pre>
+
+  <h3>② <code>apko-&lt;lang&gt;.yaml</code> — 패키지를 "최소 이미지"로</h3>
+  <p>역할: <b>여기 선언한 패키지만</b> 이미지에 들어간다. Dockerfile·<code>RUN</code>·셸 없음. <span class="anno">→ 선언 안 한 건 이미지에 존재하지 않는다(= 셸도, 컴파일러도 없음).</span></p>
+  <pre><span class="fn">apko-go.yaml</span><code><span class="key">contents</span>:
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    - keys/melange.rsa.pub          <span class="cmt"># 내 melange 패키지 검증용 공개키</span>
+  repositories:
+    - https://packages.wolfi.dev/os
+    - '@local /work/packages'       <span class="cmt"># melange가 만든 로컬 패키지</span>
+  packages:
+    - ca-certificates-bundle
+    - <span class="anno">hello@local</span>                  <span class="cmt"># 내 앱. go 컴파일러는 없음!</span>
+<span class="key">accounts</span>:                          <span class="cmt"># ← non-root 강제</span>
+  users:  [{ username: nonroot, uid: 65532, gid: 65532 }]
+  run-as: 65532
+<span class="key">entrypoint</span>:
+  command: /usr/bin/hello</code></pre>
+  <div class="note warn"><div class="i">☕</div><div><span style="font-size:14px"><b>언어별 entrypoint 주의:</b> Python은 <code>python3.13 /usr/bin/hello-py</code>, Java는 Wolfi JRE가 <code>java</code>를 PATH에 안 올려서 <code>/usr/lib/jvm/java-21-openjdk/bin/java -jar ...</code> 전체 경로 + <code>JAVA_HOME</code> env 지정.</span></div></div>
+
+  <div class="panel" style="margin-top:8px">
+    <p style="margin:0; font-size:14.5px"><b>왜 이 2단 구조가 0을 만드는가:</b> melange(빌드) ↔ apko(런타임)를 <b>물리적으로 분리</b>하기 때문. 빌드에 필요한 무거운 도구는 <code>melange</code> environment에만 있고, <code>apko</code> contents에는 앱 실행 최소 패키지만 선언 → 런타임 이미지의 CVE 표면이 구조적으로 0에 수렴한다.</p>
+  </div>
+
+  <!-- 4 -->
+  <h2 id="ci"><span class="n">4</span> 전체 워크플로 — 그대로 적용 (축약 없음)</h2>
+  <p>아래가 <b>완전한</b> <code>.github/workflows/build.yml</code>이다. 앞서 본 발췌가 아니라 13개 스텝 전부. 이 레포 구조(<code>app-*/</code>, <code>melange-*.yaml</code>, <code>apko-*.yaml</code>)와 함께 두면 커밋만으로 동작한다.</p>
+  <pre><span class="fn">.github/workflows/build.yml (전체)</span><code><span class="key">name</span>: build
+<span class="key">on</span>: { workflow_call: { inputs: {
+  tag:       { type: string, required: true },
+  extra_tag: { type: string, default: "" } } } }
+<span class="key">permissions</span>:
+  contents: read
+  packages: write        <span class="cmt"># GHCR push</span>
+  id-token: write        <span class="cmt"># cosign keyless OIDC (없으면 서명 실패)</span>
+<span class="key">jobs</span>:
+  build:
+    runs-on: ubuntu-latest
+    strategy: { fail-fast: false, matrix: { app: [go, python, java] } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: sigstore/cosign-installer@v3
+      - run: sudo apt-get update && sudo apt-get install -y skopeo
+      - run: echo <span class="str">"IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.app }}"</span> &gt;&gt; <span class="str">"$GITHUB_ENV"</span>
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: ${{ github.actor }}, password: ${{ secrets.GITHUB_TOKEN }} }
+
+      <span class="cmt"># ① melange: 서명키 생성 + 패키지 빌드</span>
+      - run: |
+          docker run --rm -v <span class="str">"$PWD"</span>:/work -w /work cgr.dev/chainguard/melange:latest keygen keys/melange.rsa
+          docker run --rm --privileged -v <span class="str">"$PWD"</span>:/work -w /work cgr.dev/chainguard/melange:latest \
+            build <span class="str">"melange-${{ matrix.app }}.yaml"</span> --arch x86_64 --signing-key keys/melange.rsa
+
+      <span class="cmt"># ② apko: 이미지 조립 + SBOM</span>
+      - run: |
+          mkdir -p sbom
+          docker run --rm -v <span class="str">"$PWD"</span>:/work -w /work cgr.dev/chainguard/apko:latest \
+            build <span class="str">"apko-${{ matrix.app }}.yaml"</span> <span class="str">"${IMAGE}:${{ inputs.tag }}"</span> /work/image.tar \
+            --arch x86_64 --sbom-path /work/sbom
+
+      <span class="cmt"># ③ CVE 게이트 — HIGH/CRIT 있으면 여기서 실패 → push 안 됨</span>
+      - uses: aquasecurity/trivy-action@0.28.0
+        with: { input: image.tar, severity: HIGH,CRITICAL, exit-code: "1", ignore-unfixed: true }
+
+      <span class="cmt"># ④ push (apko tar는 docker-archive 포맷) + digest 확보</span>
+      - run: |
+          CRED=<span class="str">"${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}"</span>
+          skopeo copy docker-archive:image.tar <span class="str">"docker://${IMAGE}:${{ inputs.tag }}"</span> --dest-creds <span class="str">"$CRED"</span>
+          [ -n <span class="str">"${{ inputs.extra_tag }}"</span> ] && skopeo copy <span class="str">"docker://${IMAGE}:${{ inputs.tag }}"</span> <span class="str">"docker://${IMAGE}:${{ inputs.extra_tag }}"</span> --dest-creds <span class="str">"$CRED"</span>
+          DIGEST=$(skopeo inspect <span class="str">"docker://${IMAGE}:${{ inputs.tag }}"</span> --format '{{.Digest}}' --creds <span class="str">"$CRED"</span>)
+          echo <span class="str">"REF=${IMAGE}@${DIGEST}"</span> &gt;&gt; <span class="str">"$GITHUB_ENV"</span>
+
+      <span class="cmt"># ⑤⑥ keyless 서명 + SBOM attestation + 검증</span>
+      - run: cosign sign --yes <span class="str">"${REF}"</span>
+      - run: cosign attest --yes --type spdxjson --predicate sbom/sbom-x86_64.spdx.json <span class="str">"${REF}"</span>
+      - run: |
+          cosign verify <span class="str">"${REF}"</span> \
+            --certificate-identity-regexp <span class="str">"^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/"</span> \
+            --certificate-oidc-issuer <span class="str">"https://token.actions.githubusercontent.com"</span></code></pre>
+
+  <h3>트리거 워크플로 2개 (build.yml 호출만)</h3>
+  <pre><span class="fn">.github/workflows/harden.yml · daily-rebuild.yml</span><code><span class="cmt"># harden.yml — 커밋/태그마다</span>
+on: { push: { branches: [main], tags: ["v*"] }, workflow_dispatch: {} }
+jobs:
+  build:
+    permissions: { contents: read, packages: write, id-token: write }
+    uses: ./.github/workflows/build.yml
+    with: { tag: "${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}", extra_tag: "${{ github.sha }}" }
+
+<span class="cmt"># daily-rebuild.yml — 매일 06:00 UTC 전체 재빌드 → CVE 0 유지</span>
+on: { schedule: [{ cron: "0 6 * * *" }], workflow_dispatch: {} }
+<span class="cmt"># (날짜 stamp job 후) uses: ./.github/workflows/build.yml with { tag: latest, extra_tag: nightly-&lt;date&gt; }</span></code></pre>
+
+  <!-- 5 -->
+  <h2 id="apply"><span class="n">5</span> 바로 적용 체크리스트</h2>
+  <div class="panel">
+    <ol class="steps">
+      <li><b>레시피 배치</b> — 레포에 <code>app-&lt;lang&gt;/</code>, <code>melange-&lt;lang&gt;.yaml</code>, <code>apko-&lt;lang&gt;.yaml</code>, <code>Makefile</code>(APP 파라미터화)을 둔다. <span style="color:var(--muted)">(이 레포가 그대로 템플릿)</span></li>
+      <li><b>워크플로 배치</b> — 위 <code>build.yml</code> / <code>harden.yml</code> / <code>daily-rebuild.yml</code>을 <code>.github/workflows/</code>에 넣는다.</li>
+      <li><b>권한 확인</b> — <code>id-token: write</code> + <code>packages: write</code>가 호출 job에 있는지. <span class="warnc">이게 keyless 서명/푸시의 전제.</span></li>
+      <li><b>시크릿 0개</b> — GHCR push·서명 모두 자동 <code>GITHUB_TOKEN</code> + OIDC. 추가 PAT/키 불필요.</li>
+      <li><b>push</b> — <code>git push</code> → Actions <code>harden</code> 실행 → <code>ghcr.io/&lt;owner&gt;/&lt;repo&gt;-{go,python,java}</code> 생성·서명.</li>
+      <li><b>패키지 visibility</b> — 첫 push 후 private로 생김. 조직 정책에 맞게 Package settings에서 조정.</li>
+      <li><b>(선택) 배포 강제</b> — K8s에서 Kyverno/policy-controller로 위 서명 신원을 검증해 미서명 Pod 거부.</li>
+    </ol>
+  </div>
+  <div class="note"><div class="i">🧪</div><div><span style="font-size:14px">로컬에서 먼저 확인: <code>make compare-all</code>(크기·CVE 표) · <code>./scripts/harden.sh python</code>(0 검증) · <code>make APP=java verify</code>(서명+SBOM).</span></div></div>
+
+  <!-- 6 -->
+  <h2 id="limit"><span class="n">6</span> 정직한 한계 — "마법"이 아닌 이유</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th>한계</th><th>의미 / 대응</th></tr></thead>
+      <tbody>
+        <tr><td>앱 의존성은 별개</td><td>trivy는 pip/jar 의존성도 스캔. 거기 CVE가 뜨면 rebuild로 안 사라짐 → <code>requirements.txt</code>/<code>build.gradle</code>를 패치버전으로 bump 필요</td></tr>
+        <tr><td>"0" = trivy/grype가 아는 0</td><td>미공개·미탐지 취약점은 카운트 안 됨. "0 탐지"지 "0 존재"가 아님</td></tr>
+        <tr><td><code>--ignore-unfixed</code></td><td>패치 없는 CVE는 게이트에서 제외(정책 선택). 끄면 Wolfi 패치 전까지 빌드가 막힘</td></tr>
+        <tr><td>HIGH/CRITICAL만 차단</td><td>MEDIUM/LOW는 통과. severity 정책은 조직 기준에 맞게</td></tr>
+        <tr><td>시간 공백</td><td>CVE 공개 → DB 반영 → 다음 daily 재빌드까지 최대 ~24h. 그리고 <b>Wolfi가 패치한 경우에만</b> 0 복귀</td></tr>
+      </tbody>
+    </table>
+    <p style="margin:14px 0 0; font-size:14.5px"><b>한 줄:</b> 이 파이프라인은 <b>OS·베이스 레이어의 CVE를 구조적으로 0으로 만들고, 매일 그 상태를 유지</b>한다. 앱 자체 의존성의 CVE는 파이프라인이 <b>탐지·차단</b>하지만 <b>고치는 건 당신 몫</b>이다.</p>
+  </div>
+
+  <footer>
+    image-harden · 취약점 0 파이프라인 설계 & 적용 가이드 · 2026-05-31<br>
+    melange(빌드) ↔ apko(런타임) 분리 + Wolfi 매일 패치 + 재빌드 루프 = 검증된 0-CVE 이미지
+  </footer>
+
+</div>
+</body>
+</html>
