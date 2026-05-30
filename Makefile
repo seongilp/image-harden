@@ -23,3 +23,13 @@ pkg: keys/melange.rsa
 	docker run --rm --privileged -v "$(CURDIR)":/work -w /work $(MELANGE) \
 		build melange.yaml --arch $(ARCH) --signing-key keys/melange.rsa
 	@echo "built package:"; ls packages/$(ARCH)/*.apk
+
+.PHONY: image
+image: pkg
+	mkdir -p sbom
+	docker run --rm -v "$(CURDIR)":/work -w /work $(APKO) \
+		build apko.yaml $(WOLFI_IMG) /work/harden-wolfi.tar \
+		--arch $(ARCH) --sbom-path /work/sbom
+	@LOADED=$$(docker load -i harden-wolfi.tar | sed -n 's/.*Loaded image: //p'); \
+		docker tag $$LOADED $(WOLFI_IMG); \
+		echo "tagged $$LOADED as $(WOLFI_IMG)"
