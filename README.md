@@ -1,60 +1,89 @@
-# image-harden — Wolfi/apko Go 이미지 하드닝 실습
+# image-harden — Wolfi/apko 멀티 워크로드 이미지 하드닝 실습
 
-Chainguard가 쓰는 **Wolfi + melange + apko** 방식을 직접 따라 하며,
-일반 `golang` 이미지 대비 크기·취약점이 얼마나 줄어드는지 손으로 확인하는 학습 프로젝트.
+Chainguard가 쓰는 **Wolfi + melange + apko** 방식으로 Go·Python·Java 앱을 하드닝하고,
+일반 베이스 이미지 대비 크기·취약점이 얼마나 줄어드는지 손으로 확인하는 학습 프로젝트.
 
 ## 실측 결과 (이 저장소 기준)
 
-| IMAGE | SIZE | HIGH+CRIT CVE |
-|---|---|---|
-| `harden:naive` (일반 golang) | **1.41 GB** | **85** |
-| `harden:wolfi` (Wolfi/apko) | **8.94 MB** | **0** |
+| 언어 | naive 크기 | naive CVE | wolfi 크기 | wolfi CVE |
+|---|---|---|---|---|
+| **Go** | 1.41 GB | 85 | **8.94 MB** | **0** |
+| **Python** | 1.62 GB | 187 | **95.8 MB** | **0** |
+| **Java** (JRE+jar) | 1.34 GB | 8 | **299 MB** | **0** |
 
-→ **약 158배 작고, HIGH/CRITICAL CVE 85개 → 0개.**
+→ 세 언어 모두 **HIGH/CRITICAL CVE 0**, 크기는 최대 158배까지 축소. 셸·패키지매니저·빌드도구 없음.
 
 ## 개념 한 줄 요약
-- **Wolfi**: 컨테이너 전용으로 새로 만든 리눅스(undistro). 군더더기 0, 매일 보안 패치, 커널 없음.
-- **melange**: 소스 → 서명된 `.apk` 패키지 빌더. 빌드 도구(Go 컴파일러)는 이 단계에만 존재.
+- **Wolfi**: 컨테이너 전용 리눅스(undistro). 군더더기 0, 매일 보안 패치, 커널 없음.
+- **melange**: 소스 → 서명된 `.apk` 패키지 빌더. 빌드 도구(컴파일러·JDK·pip)는 이 단계에만 존재.
 - **apko**: Dockerfile 없이 선언한 패키지만 모아 최소 이미지로 조립. SBOM 자동 생성.
 
 ## 사전 요구사항
-Docker, Go 1.26, cosign, trivy, grype, syft. (melange/apko는 Docker로 실행하므로 별도 설치 불필요)
+Docker, cosign, trivy, grype. (melange/apko/언어 툴체인은 Docker로 실행하므로 별도 설치 불필요)
 
 ## 빠른 시작
 ```bash
-make all      # 전체: naive 빌드 → 패키지 → 이미지 → 서명 → 스캔 → 비교 → 검증
+make all-go           # Go 전체 파이프라인
+make all-python       # Python
+make all-java         # Java
+make compare-all      # 세 언어 before/after 한 표로
 ```
 
-## 단계별 실행
+## 워크로드 파라미터화 (APP 변수)
+모든 타겟은 `APP=go|python|java`로 동작한다. 언어별 파일: `app-<lang>/`, `melange-<lang>.yaml`, `apko-<lang>.yaml`, `Dockerfile.naive-<lang>`.
+
 | 명령 | 하는 일 |
 |---|---|
-| `make naive`   | 비교용 무거운 golang 이미지 빌드 |
-| `make pkg`     | melange로 `hello.apk` 빌드 (`--privileged` 필요) |
-| `make image`   | apko로 non-root 하드닝 이미지 조립 + SBOM 생성 |
-| `make sign`    | 로컬 레지스트리 push 후 cosign 서명 |
-| `make scan`    | trivy/grype로 양쪽 취약점 스캔 |
-| `make compare` | 크기 + HIGH/CRIT CVE 비교 표 |
-| `make verify`  | cosign verify + SBOM 패키지 목록 확인 |
-| `make clean`   | 산출물·컨테이너 정리 (keys 보존) |
+| `make APP=python naive`   | 비교용 무거운 베이스 이미지 |
+| `make APP=python pkg`     | melange로 apk 빌드 (`--privileged`) |
+| `make APP=python image`   | apko로 non-root 하드닝 이미지 + SBOM |
+| `make APP=python sign`    | 로컬 레지스트리 push + cosign **key-based** 서명 |
+| `make APP=python compare` | 크기 + CVE 비교 표 |
+| `make APP=python verify`  | cosign verify + SBOM 목록 |
+| `make APP=java all`       | 위 전체를 한 번에 |
+| `make clean-all`          | 전 언어 산출물·레지스트리 정리 (keys 보존) |
 
-## 무엇을 보게 되나
-- `make compare`: naive(1.41GB·CVE 85) vs wolfi(8.94MB·CVE 0)
-- 셸이 없어 공격 표면 최소 — 확인:
-  ```bash
-  docker run --rm --entrypoint /bin/sh harden:wolfi -c "echo hi"
-  # → /bin/sh: no such file or directory  (정상: 셸 미포함)
-  ```
-- `make verify`: 서명 검증 통과 + SBOM에 우리가 선언한 패키지(`hello`, `ca-certificates-bundle`, `wolfi-baselayout`)만 존재.
+## 언어별 하드닝 포인트
+- **Go**: 정적 바이너리 하나 → `FROM scratch`급 최소(8.94MB). melange `go/build` 파이프라인.
+- **Python**: 런타임에 인터프리터+의존성 필요 → melange가 `pip install --target`으로 의존성을 패키지에 vendoring, apko는 `python-3.13`만 포함.
+- **Java**: 빌드는 JDK+Gradle(melange 단계에만), 런타임은 **JRE만**(apko `openjdk-21-jre`). jar는 `/usr/share/hello/app.jar`. (Wolfi JRE는 `java`를 PATH에 안 올리므로 entrypoint에 전체 경로 사용.)
+
+## 서명: key-based vs keyless
+
+| | key-based (`make sign`) | keyless (`make sign-keyless`) |
+|---|---|---|
+| 개인키 | 직접 생성·보관 (`keys/cosign.key`) | **없음** (10분 임시 인증서) |
+| 신뢰 기준 | 공개키 파일 | **신원(OIDC)** + Rekor 투명성 로그 |
+| 실행 | 비대화식, 오프라인 | 브라우저 OIDC 로그인 필요 |
+| 적합 | 로컬·학습 | **CI/CD**(GitHub Actions 등), 실제 배포 |
+
+**keyless 사용법** (인터랙티브):
+```bash
+make keyless-doctor                # 환경 점검 (~/.sigstore 권한 등)
+# 필요 시: sudo chown -R $(whoami) ~/.sigstore
+make sign-keyless APP=go           # 브라우저 OIDC 로그인 → 서명
+make verify-keyless APP=go \
+     IDENTITY=you@gmail.com ISSUER=https://accounts.google.com
+```
+> GitHub Actions에서는 사람 로그인 없이 **워크플로 신원**으로 자동 서명된다 — 이것이 Chainguard가 실제 배포 이미지에 쓰는 방식이다.
+
+## 하드닝 증거
+```bash
+docker run --rm --entrypoint /bin/sh harden-go:wolfi -c "echo hi"
+# → /bin/sh: no such file or directory   (정상: 셸 미포함 = 공격 표면 최소)
+make APP=go verify    # 서명 검증 통과 + SBOM에 선언한 패키지만 존재
+```
 
 ## 환경 메모 (이 머신에서 겪은 함정)
-- **cgr.dev credential helper**: `~/.docker/config.json`에 `docker-credential-cgr`가 설정만 되고 미설치 → 익명 pull 실패. 프로젝트 로컬 빈 config(`.docker-anon/`)로 우회한다(Makefile이 `DOCKER_CONFIG`로 자동 지정).
-- **레지스트리 포트 5050**: macOS는 5000을 AirPlay(ControlCenter)가 점유하므로 5050 사용.
-- **cosign 오프라인 서명**: 로컬 키 기반이라 sigstore 투명성 로그(tlog)를 쓰지 않는다. 서명은 `--use-signing-config=false --tlog-upload=false`, 검증은 `--insecure-ignore-tlog`로 진행.
+- **cgr.dev credential helper**: `docker-credential-cgr` 미설치 → 빈 config(`.docker-anon/`)로 익명 pull 우회.
+- **레지스트리 포트 5050**: macOS는 5000을 AirPlay가 점유.
+- **cosign v3 오프라인 서명**: key-based는 `--use-signing-config=false --tlog-upload=false`, 검증은 `--insecure-ignore-tlog`.
+- **`~/.sigstore` root 소유**: keyless 전 `sudo chown`으로 권한 회복 필요(`keyless-doctor`가 점검).
 
 ## 파일 안내
-- `app/` — 최소 Go HTTP 서버 (`/` → `hello, hardened`)
-- `melange.yaml` — apk 패키지 빌드 정의
-- `apko.yaml` — 이미지 조립 정의 (non-root uid 65532, entrypoint, 셸 없음)
-- `Dockerfile.naive` — 비교 기준점
-- `scripts/compare.sh` / `scripts/verify.sh` — 비교·검증 헬퍼
+- `app-go/` `app-python/` `app-java/` — 각 언어 최소 HTTP 서버
+- `melange-<lang>.yaml` / `apko-<lang>.yaml` — 패키지 빌드 / 이미지 조립 정의
+- `Dockerfile.naive-<lang>` — 비교 기준점
+- `scripts/` — compare / compare-all / verify 헬퍼
 - `docs/superpowers/` — 설계 spec과 구현 계획
+- `report.html` — 시각 정리 리포트
