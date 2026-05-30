@@ -45,3 +45,6 @@ models:
         +materialized: table   # 원격 CSV은 한 번만 읽어 테이블로 고정
       marts:
         +materialized: table
+    overview:
+      +schema: overview
+      +materialized: table     # 크로스도메인 요약
