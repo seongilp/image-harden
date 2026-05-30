@@ -1,0 +1,22 @@
+sha,author,commit_date,commit_type,subject
+4bbcb70,Seongil Park,2026-05-31,docs,docs: 취약점 0 파이프라인 설계+레시피 해부+적용 HTML 문서
+3324fbb,Seongil Park,2026-05-31,feat,feat: harden 파이프라인 스크립트 (rebuild→이중스캔→0 검증→잔여보고)
+490e650,Seongil Park,2026-05-31,docs,docs: GitHub Actions 메커니즘+설정 HTML 문서
+1aaf611,Seongil Park,2026-05-31,feat,feat: GitHub Actions 하드닝 자동화 워크플로 + 메커니즘 문서
+c4af12d,Seongil Park,2026-05-31,feat,feat: compare-all + keyless 타겟 + 문서 갱신
+407991c,Seongil Park,2026-05-31,feat,feat: Java 워크로드 하드닝(Gradle jar + JRE apko)
+9daec2c,Seongil Park,2026-05-31,feat,feat: Python 워크로드 하드닝(melange pip vendoring + apko)
+298a52c,Seongil Park,2026-05-31,refactor,refactor: Go 파이프라인 APP 변수 파라미터화
+721e5be,Seongil Park,2026-05-31,docs,docs: 멀티 워크로드 + keyless 구현 계획
+490dae4,Seongil Park,2026-05-31,docs,docs: 멀티 워크로드(Python/Java) + keyless 설계 spec
+ae89264,Seongil Park,2026-05-30,docs,docs: 전체 실습 내용 정리 HTML 리포트 추가
+0df4ac8,Seongil Park,2026-05-30,feat,feat: 전체 파이프라인(all/clean) 타겟 + README 학습 가이드
+b253a2a,Seongil Park,2026-05-30,feat,feat: cosign verify + SBOM 검증 스크립트
+0064362,Seongil Park,2026-05-30,feat,feat: trivy/grype 스캔 + before/after 비교 표
+b14f450,Seongil Park,2026-05-30,feat,"feat: 로컬 레지스트리 push + cosign 서명 (포트 5050, 오프라인 키 서명)"
+26424d2,Seongil Park,2026-05-30,feat,feat: apko로 non-root 하드닝 이미지 조립
+9671cbf,Seongil Park,2026-05-30,feat,feat: melange로 hello apk 패키지 빌드
+ffec239,Seongil Park,2026-05-30,feat,feat: 비교용 naive golang 이미지 + Makefile 기초
+7dddeb4,Seongil Park,2026-05-30,feat,feat: 최소 Go HTTP 서버 + 핸들러 테스트
+8f41cae,Seongil Park,2026-05-30,docs,docs: Wolfi/apko Go 하드닝 구현 계획 추가
+661df2b,Seongil Park,2026-05-30,docs,docs: Wolfi/apko Go 이미지 하드닝 실습 설계 spec 추가

@@ -1,0 +1,37 @@
+name: 'dbt_playground'
+version: '1.0.0'
+profile: 'dbt_playground'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  dbt_playground:
+    +materialized: view
+    security:
+      +schema: security
+      marts:
+        +materialized: table
+    git:
+      +schema: git
+      marts:
+        +materialized: table
+    jaffle:
+      +schema: jaffle
+      staging:
+        +materialized: table   # 원격 CSV은 한 번만 읽어 테이블로 고정
+      marts:
+        +materialized: table
+    public:
+      +schema: public
+      staging:
+        +materialized: table   # 원격 parquet은 한 번만 읽어 테이블로 고정
+      marts:
+        +materialized: table

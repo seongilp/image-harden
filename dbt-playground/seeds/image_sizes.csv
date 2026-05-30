@@ -1,0 +1,7 @@
+lang,variant,size_mb
+go,naive,329.66
+go,wolfi,2.54
+python,naive,405.89
+python,wolfi,23.85
+java,naive,430.52
+java,wolfi,75.53

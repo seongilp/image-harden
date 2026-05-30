@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: stg_vuln_findings
+    description: "trivy 취약점 findings 정리 (전 심각도)"
+    columns:
+      - name: severity
+        description: "심각도"
+        data_tests:
+          - accepted_values:
+              values: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'UNKNOWN']
+
+  - name: stg_image_sizes
+    description: "이미지 크기(MB)"
+    columns:
+      - name: variant
+        data_tests:
+          - accepted_values:
+              values: ['naive', 'wolfi']
+      - name: size_mb
+        data_tests:
+          - not_null
+
+  - name: mart_image_security
+    description: "이미지별 크기 + 취약점 요약 (naive vs wolfi)"
+    columns:
+      - name: high_crit_vulns
+        data_tests:
+          - not_null
+
+  - name: mart_severity_breakdown
+    description: "variant x 심각도별 findings 개수"

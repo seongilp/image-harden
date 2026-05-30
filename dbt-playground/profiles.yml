@@ -1,0 +1,11 @@
+dbt_playground:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: playground.duckdb
+      threads: 4
+      extensions:
+        - httpfs
+        - json
+        - parquet

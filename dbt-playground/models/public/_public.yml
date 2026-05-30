@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: stg_taxi
+    description: "NYC 옐로우 택시 2024-01 샘플 (원격 parquet)"
+    columns:
+      - name: pickup_hour
+        data_tests:
+          - not_null
+  - name: mart_taxi_by_hour
+    description: "시간대별 운행/거리/요금"
+    columns:
+      - name: pickup_hour
+        data_tests: [unique, not_null]

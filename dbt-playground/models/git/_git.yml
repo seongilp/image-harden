@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: stg_commits
+    description: "git 커밋 로그 (image-harden 레포)"
+    columns:
+      - name: sha
+        description: "커밋 단축 해시"
+        data_tests:
+          - unique
+          - not_null
+
+  - name: mart_commits_by_type
+    description: "conventional commit 타입별 집계"
+
+  - name: mart_commits_by_author
+    description: "작성자별 커밋 집계"
