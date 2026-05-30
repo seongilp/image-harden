@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: stg_driver_standings
+    description: "시즌별 드라이버 최종 순위 (Jolpica/Ergast)"
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: driver_id
+        data_tests: [not_null]
+  - name: stg_constructor_standings
+    description: "시즌별 컨스트럭터 최종 순위"
+  - name: mart_driver_titles
+    description: "시즌별 드라이버 챔피언"
+    columns:
+      - name: season
+        data_tests: [unique, not_null]
+  - name: mart_driver_career
+    description: "드라이버 통산 누적 (2010~2024)"
+    columns:
+      - name: driver_id
+        data_tests: [unique, not_null]
+  - name: mart_constructor_dominance
+    description: "시즌별 우승 팀 + 포인트 점유율"
+    columns:
+      - name: season
+        data_tests: [unique, not_null]

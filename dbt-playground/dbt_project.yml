@@ -35,3 +35,13 @@ models:
         +materialized: table   # 원격 parquet은 한 번만 읽어 테이블로 고정
       marts:
         +materialized: table
+    f1:
+      +schema: f1
+      marts:
+        +materialized: table
+    pokemon:
+      +schema: pokemon
+      staging:
+        +materialized: table   # 원격 CSV은 한 번만 읽어 테이블로 고정
+      marts:
+        +materialized: table

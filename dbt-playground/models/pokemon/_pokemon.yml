@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_pokemon
+    description: "Pokemon 800마리 종족값 (원격 CSV)"
+    columns:
+      - name: name
+        data_tests: [not_null]
+      - name: type1
+        data_tests: [not_null]
+  - name: mart_type_strength
+    description: "주 타입별 평균 종족값 랭킹"
+    columns:
+      - name: type1
+        data_tests: [unique, not_null]
+  - name: mart_legendary_compare
+    description: "전설 vs 일반 평균 스탯"
+  - name: mart_generation_stats
+    description: "세대별 집계"
+    columns:
+      - name: generation
+        data_tests: [unique, not_null]
