@@ -70,3 +70,13 @@ compare: naive image
 .PHONY: verify
 verify: sign
 	./scripts/verify.sh
+
+.PHONY: all
+all: naive image sign scan compare verify
+
+.PHONY: clean
+clean:
+	-docker rmi $(NAIVE_IMG) $(WOLFI_IMG) $(WOLFI_IMG)-arm64 $(REG)/harden:wolfi 2>/dev/null
+	-docker rm -f $(REG_NAME) 2>/dev/null
+	-rm -rf packages sbom harden-wolfi.tar
+	@echo "cleaned (keys/ 는 보존)"
