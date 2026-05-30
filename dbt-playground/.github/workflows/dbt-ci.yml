@@ -1,0 +1,25 @@
+# analytics CI: push/PR마다 dbt build (SQL 빌드 + 데이터 테스트)를 돌린다.
+# DuckDB라 창고/시크릿 불필요 — seed(커밋된 CSV) + 원격 URL만으로 완결.
+# 데이터 테스트가 깨지면 이 체크가 빨개져서 머지를 막는다.
+name: dbt-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  dbt-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dbt-duckdb
+        run: pip install dbt-duckdb
+
+      - name: dbt build (SQL 빌드 + 데이터 테스트)
+        run: dbt build --profiles-dir .
