@@ -1,7 +1,7 @@
 # 비교 기준점: 표준 golang 베이스를 그대로 런타임에 사용 (멀티스테이지 X)
 FROM golang:1.26
 WORKDIR /src
-COPY app/ ./
+COPY app-go/ ./
 RUN go build -o /usr/local/bin/hello .
 EXPOSE 8080
 CMD ["hello"]

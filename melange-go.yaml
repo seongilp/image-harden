@@ -20,6 +20,6 @@ environment:
 pipeline:
   - uses: go/build
     with:
-      modroot: app
+      modroot: app-go
       packages: .
       output: hello
