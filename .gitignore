@@ -1,0 +1,5 @@
+keys/
+*.apk
+packages/
+sbom-*
+*.sig
