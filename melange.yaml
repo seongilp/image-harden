@@ -1,0 +1,25 @@
+package:
+  name: hello
+  version: 1.0.0
+  epoch: 0
+  description: "minimal hardened go http server"
+  copyright:
+    - license: Apache-2.0
+
+environment:
+  contents:
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    repositories:
+      - https://packages.wolfi.dev/os
+    packages:
+      - busybox
+      - ca-certificates-bundle
+      - go
+
+pipeline:
+  - uses: go/build
+    with:
+      modroot: app
+      packages: .
+      output: hello

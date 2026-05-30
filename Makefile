@@ -13,3 +13,13 @@ REG_NAME   := harden-registry
 naive:
 	docker build -f Dockerfile.naive -t $(NAIVE_IMG) .
 	@echo "built $(NAIVE_IMG)"
+
+keys/melange.rsa:
+	mkdir -p keys
+	docker run --rm -v "$(CURDIR)":/work -w /work $(MELANGE) keygen keys/melange.rsa
+
+.PHONY: pkg
+pkg: keys/melange.rsa
+	docker run --rm --privileged -v "$(CURDIR)":/work -w /work $(MELANGE) \
+		build melange.yaml --arch $(ARCH) --signing-key keys/melange.rsa
+	@echo "built package:"; ls packages/$(ARCH)/*.apk
