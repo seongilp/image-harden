@@ -1,0 +1,25 @@
+package:
+  name: hello-java
+  version: 1.0.0
+  epoch: 0
+  description: "minimal hardened java http server"
+  copyright:
+    - license: Apache-2.0
+
+environment:
+  contents:
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    repositories:
+      - https://packages.wolfi.dev/os
+    packages:
+      - busybox
+      - openjdk-21-default-jdk
+      - gradle-9
+
+pipeline:
+  - runs: |
+      cd app-java
+      gradle --no-daemon jar
+      mkdir -p "${{targets.destdir}}/usr/share/hello"
+      install -m644 build/libs/hello.jar "${{targets.destdir}}/usr/share/hello/app.jar"

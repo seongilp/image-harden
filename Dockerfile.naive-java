@@ -1,0 +1,7 @@
+# 비교 기준점: 표준 gradle+jdk 베이스를 그대로 런타임에 사용
+FROM gradle:9-jdk21
+WORKDIR /app
+COPY app-java/ ./
+RUN gradle --no-daemon jar
+EXPOSE 8080
+CMD ["java", "-jar", "build/libs/hello.jar"]

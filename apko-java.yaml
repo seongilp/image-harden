@@ -1,0 +1,31 @@
+contents:
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    - keys/melange.rsa.pub
+  repositories:
+    - https://packages.wolfi.dev/os
+    - '@local /work/packages'
+  packages:
+    - openjdk-21-jre
+    - hello-java@local
+
+accounts:
+  groups:
+    - groupname: nonroot
+      gid: 65532
+  users:
+    - username: nonroot
+      uid: 65532
+      gid: 65532
+  run-as: 65532
+
+# Wolfi의 openjdk-21-jre는 java를 /usr/bin에 심볼릭하지 않으므로 전체 경로 사용
+environment:
+  JAVA_HOME: /usr/lib/jvm/java-21-openjdk
+  PATH: /usr/lib/jvm/java-21-openjdk/bin:/usr/sbin:/sbin:/usr/bin:/bin
+
+entrypoint:
+  command: /usr/lib/jvm/java-21-openjdk/bin/java -jar /usr/share/hello/app.jar
+
+archs:
+  - aarch64
