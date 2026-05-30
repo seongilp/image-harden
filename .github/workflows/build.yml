@@ -1,0 +1,99 @@
+# 재사용 워크플로: 한 번 호출에 go/python/java 이미지를
+# melange(.apk) → apko(이미지) → trivy 게이트 → GHCR push → cosign keyless 서명 → SBOM attest 까지.
+name: build
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "기본 태그 (예: latest, v1.2.3, nightly-20260531)"
+        type: string
+        required: true
+      extra_tag:
+        description: "추가 태그 (예: git sha). 비우면 생략"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  packages: write     # GHCR push
+  id-token: write     # cosign keyless 서명용 OIDC 토큰
+
+jobs:
+  build:
+    runs-on: ubuntu-latest   # x86_64 러너에서 x86_64 네이티브 빌드
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [go, python, java]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Install skopeo
+        run: sudo apt-get update && sudo apt-get install -y skopeo
+
+      # 이미지 레포명은 소문자만 허용 → ${VAR,,}로 소문자화
+      - name: Compute image ref
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.app }}" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 1) melange: 소스 → 서명된 .apk (빌드 도구는 이 단계에만 존재)
+      - name: melange — build signed .apk
+        run: |
+          docker run --rm -v "$PWD":/work -w /work \
+            cgr.dev/chainguard/melange:latest keygen keys/melange.rsa
+          docker run --rm --privileged -v "$PWD":/work -w /work \
+            cgr.dev/chainguard/melange:latest build "melange-${{ matrix.app }}.yaml" \
+            --arch x86_64 --signing-key keys/melange.rsa
+
+      # 2) apko: 선언한 패키지만 조립 → OCI tar + SBOM (Dockerfile/셸 없음)
+      - name: apko — assemble minimal image (+ SBOM)
+        run: |
+          mkdir -p sbom
+          docker run --rm -v "$PWD":/work -w /work \
+            cgr.dev/chainguard/apko:latest build "apko-${{ matrix.app }}.yaml" \
+            "${IMAGE}:${{ inputs.tag }}" /work/image.tar \
+            --arch x86_64 --sbom-path /work/sbom
+
+      # 3) CVE 게이트: HIGH/CRITICAL 있으면 여기서 실패 → push 안 됨
+      - name: Vulnerability gate (trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          input: image.tar
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+      # 4) 게이트 통과 시에만 GHCR로 push (apko OCI tar는 docker-archive 포맷)
+      - name: Push to GHCR
+        run: |
+          CRED="${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}"
+          skopeo copy docker-archive:image.tar "docker://${IMAGE}:${{ inputs.tag }}" --dest-creds "$CRED"
+          if [ -n "${{ inputs.extra_tag }}" ]; then
+            skopeo copy "docker://${IMAGE}:${{ inputs.tag }}" "docker://${IMAGE}:${{ inputs.extra_tag }}" --dest-creds "$CRED"
+          fi
+          DIGEST=$(skopeo inspect "docker://${IMAGE}:${{ inputs.tag }}" --format '{{.Digest}}' --creds "$CRED")
+          echo "REF=${IMAGE}@${DIGEST}" >> "$GITHUB_ENV"
+
+      # 5) keyless 서명 + SBOM attestation (보관 키 없음, 워크플로 신원으로 서명)
+      - name: Sign image (keyless / GitHub OIDC)
+        run: cosign sign --yes "${REF}"
+
+      - name: Attach SBOM attestation
+        run: cosign attest --yes --type spdxjson --predicate sbom/sbom-x86_64.spdx.json "${REF}"
+
+      # 검증 sanity: 우리 워크플로 신원으로 서명됐는지 확인
+      - name: Verify signature
+        run: |
+          cosign verify "${REF}" \
+            --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com"

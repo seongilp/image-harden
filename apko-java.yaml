@@ -27,5 +27,3 @@ environment:
 entrypoint:
   command: /usr/lib/jvm/java-21-openjdk/bin/java -jar /usr/share/hello/app.jar
 
-archs:
-  - aarch64

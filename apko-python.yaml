@@ -22,5 +22,3 @@ accounts:
 entrypoint:
   command: python3.13 /usr/bin/hello-py
 
-archs:
-  - aarch64

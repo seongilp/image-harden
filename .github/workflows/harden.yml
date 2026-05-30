@@ -1,0 +1,24 @@
+# 커밋(main)/태그(v*) 마다 하드닝 이미지를 빌드·서명·push.
+name: harden
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: harden-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/build.yml
+    with:
+      # 태그 푸시면 그 태그(v1.2.3), 아니면 latest
+      tag: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+      extra_tag: ${{ github.sha }}

@@ -1,0 +1,28 @@
+# 매일 전체 재빌드 → Wolfi 보안 패치 자동 흡수 → "CVE 0" 유지.
+# 코드가 안 바뀌어도 베이스 패키지의 최신 패치로 다시 빌드된다.
+name: daily-rebuild
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 매일 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  date:
+    runs-on: ubuntu-latest
+    outputs:
+      stamp: ${{ steps.d.outputs.stamp }}
+    steps:
+      - id: d
+        run: echo "stamp=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: date
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/build.yml
+    with:
+      tag: latest                                   # 최신 안전본 갱신
+      extra_tag: nightly-${{ needs.date.outputs.stamp }}   # 롤백용 날짜 태그 보존

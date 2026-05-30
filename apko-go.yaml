@@ -22,5 +22,3 @@ accounts:
 entrypoint:
   command: /usr/bin/hello
 
-archs:
-  - aarch64
