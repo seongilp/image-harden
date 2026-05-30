@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Actions로 이미지 하드닝 자동화 — 메커니즘 & 설정</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#2d3543;
+    --text:#e6edf3; --muted:#9aa7b4; --accent:#7c5cff; --accent2:#37c8ab;
+    --danger:#ff6b6b; --good:#3fb950; --warn:#e3b341; --mono:#cdd9e5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo",Roboto,sans-serif;
+    line-height:1.65; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:980px; margin:0 auto; padding:48px 24px 96px}
+  header.hero{border:1px solid var(--border); border-radius:16px; padding:40px;
+    background:linear-gradient(140deg,#161b22 0%,#102019 100%); position:relative; overflow:hidden;}
+  header.hero::after{content:""; position:absolute; right:-60px; top:-60px; width:220px; height:220px;
+    background:radial-gradient(circle,rgba(55,200,171,.30),transparent 70%);}
+  .kicker{color:var(--accent2); font-weight:700; letter-spacing:.08em; font-size:13px; text-transform:uppercase}
+  h1{margin:.2em 0 .3em; font-size:32px; line-height:1.2}
+  .sub{color:var(--muted); font-size:17px; max-width:680px}
+  .tagrow{margin-top:22px; display:flex; gap:8px; flex-wrap:wrap}
+  .tag{font-size:12px; padding:5px 11px; border-radius:999px; background:var(--panel2); border:1px solid var(--border); color:var(--mono)}
+  h2{margin:56px 0 18px; font-size:23px; display:flex; align-items:center; gap:12px}
+  h2 .n{font-size:13px; color:var(--accent2); border:1px solid var(--accent2); border-radius:8px; padding:2px 9px; font-weight:700}
+  h3{margin:26px 0 10px; font-size:17px}
+  p{color:#cdd6df}
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:24px}
+  table{width:100%; border-collapse:collapse; margin-top:8px; overflow:hidden; border-radius:12px}
+  th,td{padding:12px 15px; text-align:left; border-bottom:1px solid var(--border); font-size:14.5px; vertical-align:top}
+  thead th{background:var(--panel2); color:var(--muted); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em}
+  tbody tr:last-child td{border-bottom:none}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace; font-size:13px; color:var(--mono)}
+  pre{background:#0a0e14; border:1px solid var(--border); border-radius:10px; padding:16px 18px; overflow-x:auto; margin:12px 0}
+  pre code{color:var(--mono); font-size:13px}
+  .cmt{color:#5d6b7a} .kw{color:var(--accent)} .str{color:var(--accent2)} .out{color:var(--good)} .bad{color:var(--danger)}
+  /* pipeline */
+  .pipe{display:flex; flex-wrap:wrap; gap:8px; align-items:stretch; margin-top:8px}
+  .pstep{flex:1; min-width:130px; background:var(--panel2); border:1px solid var(--border); border-radius:11px; padding:14px}
+  .pstep .pn{font-size:11px; color:var(--accent2); font-weight:700}
+  .pstep b{display:block; font-size:14px; margin:3px 0}
+  .pstep span{color:var(--muted); font-size:12px}
+  .pstep code{font-size:11.5px}
+  .gate{border-color:var(--warn)!important; background:#241f12!important}
+  .gate .pn{color:var(--warn)}
+  .arrow{align-self:center; color:var(--border); font-size:18px; padding:0 2px}
+  ul.clean{list-style:none; padding:0; margin:0}
+  ul.clean li{padding:9px 0 9px 26px; position:relative; border-bottom:1px solid var(--border); color:#cdd6df; font-size:14px}
+  ul.clean li:last-child{border-bottom:none}
+  ul.clean li::before{content:"›"; position:absolute; left:6px; color:var(--accent2); font-weight:700}
+  .pill{display:inline-block; font-size:12px; padding:2px 8px; border-radius:6px; background:var(--panel2); border:1px solid var(--border); color:var(--mono); font-family:monospace}
+  .note{display:flex; gap:12px; padding:15px 16px; border:1px solid var(--border); border-left:3px solid var(--accent2); border-radius:10px; background:var(--panel2); margin:14px 0}
+  .note .i{flex:none; font-size:18px}
+  .note b{color:var(--accent2)}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr} h1{font-size:26px}}
+  footer{margin-top:64px; padding-top:24px; border-top:1px solid var(--border); color:var(--muted); font-size:13px; text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">CI/CD · Image Hardening Automation</div>
+    <h1>GitHub Actions로 이미지 하드닝 자동화</h1>
+    <p class="sub">커밋마다 go·python·java를 자동으로 <b>빌드 → CVE 게이트 → GHCR push → keyless 서명</b>하고, <b>매일 재빌드로 CVE 0을 유지</b>한다. 추가 시크릿 0.</p>
+    <div class="tagrow">
+      <span class="tag">melange + apko</span>
+      <span class="tag">trivy gate</span>
+      <span class="tag">cosign keyless</span>
+      <span class="tag">SBOM attest</span>
+      <span class="tag">GHCR</span>
+      <span class="tag">daily rebuild</span>
+    </div>
+  </header>
+
+  <!-- MECHANISM -->
+  <h2><span class="n">1</span> 메커니즘 — CI 한 사이클</h2>
+  <div class="panel">
+    <div class="pipe">
+      <div class="pstep"><div class="pn">①</div><b>melange</b><span>소스 → 서명된 <code>.apk</code>. 빌드도구는 이 단계만</span></div>
+      <div class="arrow">→</div>
+      <div class="pstep"><div class="pn">②</div><b>apko</b><span>패키지만 조립 → OCI tar + SBOM. 셸 없음</span></div>
+      <div class="arrow">→</div>
+      <div class="pstep gate"><div class="pn">③ GATE</div><b>trivy</b><span>HIGH/CRIT 있으면 <span class="bad">exit 1</span> → push 차단</span></div>
+      <div class="arrow">→</div>
+      <div class="pstep"><div class="pn">④</div><b>skopeo push</b><span>GHCR로 push, digest 확보</span></div>
+      <div class="arrow">→</div>
+      <div class="pstep"><div class="pn">⑤</div><b>cosign sign</b><span>keyless 서명 + Rekor 기록</span></div>
+      <div class="arrow">→</div>
+      <div class="pstep"><div class="pn">⑥</div><b>cosign attest</b><span>SBOM 첨부</span></div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:16px">
+    <div class="note"><div class="i">🔑</div><div><b>왜 keyless인가</b><br><span style="font-size:14px;color:var(--muted)"><code>id-token: write</code> 권한 → GitHub OIDC 토큰 → Fulcio가 "이 워크플로가 서명함"을 증명하는 10분 임시 인증서 발급. <b>개인키를 레포 시크릿에 둘 필요 없음.</b></span></div></div>
+    <div class="note"><div class="i">🔄</div><div><b>왜 daily rebuild가 CVE 0의 핵심인가</b><br><span style="font-size:14px;color:var(--muted)">melange/apko는 매번 <code>packages.wolfi.dev</code>에서 <b>최신</b> 패키지를 받는다. 코드가 안 바뀌어도 매일 재빌드하면 새 CVE 패치가 자동 반영된다.</span></div></div>
+  </div>
+
+  <h3>단계별 도구</h3>
+  <div class="panel">
+    <table>
+      <thead><tr><th>단계</th><th>도구</th><th>핵심</th></tr></thead>
+      <tbody>
+        <tr><td>① 패키지화</td><td><span class="pill">melange build</span></td><td>소스 → 서명된 <code>.apk</code>. 빌드 도구(JDK·pip·컴파일러)는 이 단계에만 존재</td></tr>
+        <tr><td>② 이미지화</td><td><span class="pill">apko build</span></td><td>선언한 패키지만 조립 → OCI tar + SBOM. Dockerfile·셸 없음</td></tr>
+        <tr><td>③ CVE 게이트</td><td><span class="pill">trivy --input</span></td><td>HIGH/CRITICAL 발견 시 <code>exit 1</code> → 워크플로 실패 → <b>push 차단</b></td></tr>
+        <tr><td>④ push</td><td><span class="pill">skopeo copy docker-archive:</span></td><td>apko tar를 GHCR로. digest 확보</td></tr>
+        <tr><td>⑤ 서명</td><td><span class="pill">cosign sign</span> (keyless)</td><td>보관 키 없이 워크플로 신원(OIDC)으로 서명, Rekor 기록</td></tr>
+        <tr><td>⑥ SBOM</td><td><span class="pill">cosign attest</span></td><td>이미지에 SBOM attestation 첨부</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FILES -->
+  <h2><span class="n">2</span> 워크플로 파일 3개</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th>파일</th><th>트리거</th><th>역할</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill">build.yml</span></td><td><code>workflow_call</code> (재사용)</td><td>실제 빌드·게이트·서명 로직 (go/python/java matrix)</td></tr>
+        <tr><td><span class="pill">harden.yml</span></td><td>push(main) / tag(v*)</td><td>변경 시 빌드 → <code>latest</code>(또는 <code>v1.2.3</code>) + sha 태그</td></tr>
+        <tr><td><span class="pill">daily-rebuild.yml</span></td><td>cron 매일 06:00 UTC</td><td>전체 재빌드 → <code>latest</code> 갱신 + <code>nightly-YYYYMMDD</code> 보존</td></tr>
+      </tbody>
+    </table>
+    <p style="margin:14px 0 0; color:var(--muted); font-size:14px"><code>harden.yml</code>/<code>daily-rebuild.yml</code>은 둘 다 <code>build.yml</code>을 호출만 한다 (로직 1곳, DRY).</p>
+  </div>
+
+  <h3>build.yml 핵심 발췌</h3>
+  <pre><code><span class="kw">permissions</span>:
+  contents: read
+  packages: write     <span class="cmt"># GHCR push</span>
+  id-token: write     <span class="cmt"># keyless 서명용 OIDC</span>
+
+<span class="kw">jobs</span>:
+  build:
+    strategy: { matrix: { app: [go, python, java] } }
+    steps:
+      <span class="cmt"># ① melange → 서명된 .apk (빌드 도구는 여기만)</span>
+      - run: docker run --rm --privileged -v "$PWD":/work -w /work \
+          cgr.dev/chainguard/melange build melange-${{ matrix.app }}.yaml \
+          --arch x86_64 --signing-key keys/melange.rsa
+
+      <span class="cmt"># ② apko → OCI tar + SBOM</span>
+      - run: docker run --rm -v "$PWD":/work -w /work \
+          cgr.dev/chainguard/apko build apko-${{ matrix.app }}.yaml \
+          "${IMAGE}:${{ inputs.tag }}" /work/image.tar --arch x86_64 --sbom-path /work/sbom
+
+      <span class="cmt"># ③ CVE 게이트 — HIGH/CRIT 있으면 실패</span>
+      - uses: aquasecurity/trivy-action@0.28.0
+        with: { input: image.tar, severity: HIGH,CRITICAL, exit-code: "1", ignore-unfixed: true }
+
+      <span class="cmt"># ④ push (apko OCI tar는 docker-archive 포맷)</span>
+      - run: skopeo copy docker-archive:image.tar "docker://${IMAGE}:${{ inputs.tag }}" --dest-creds "$CRED"
+
+      <span class="cmt"># ⑤⑥ keyless 서명 + SBOM attest</span>
+      - run: cosign sign --yes "${REF}"
+      - run: cosign attest --yes --type spdxjson --predicate sbom/sbom-x86_64.spdx.json "${REF}"</code></pre>
+
+  <!-- SETUP -->
+  <h2><span class="n">3</span> 설정 — 이대로만 하면 동작</h2>
+  <div class="panel">
+    <ul class="clean">
+      <li><b>권한</b> — 워크플로에 이미 박혀 있음: <code>packages: write</code>(push) + <code>id-token: write</code>(keyless 서명). 이게 없으면 <code>cosign sign</code> 실패.</li>
+      <li><b>GHCR 시크릿 불필요</b> — 자동 제공되는 <code>secrets.GITHUB_TOKEN</code>으로 push. 별도 PAT 안 만들어도 됨.</li>
+      <li><b>패키지 visibility</b> — 첫 push 후 패키지가 private으로 생김. Repo → Packages → Package settings에서 조정.</li>
+      <li><b>이미지 이름</b> — <code>ghcr.io/&lt;owner&gt;/&lt;repo&gt;-&lt;app&gt;</code> 자동 생성 (예: <code>ghcr.io/acme/hardened-images-java</code>). 치환 불필요.</li>
+      <li><b>빌드 아키텍처</b> — CI는 <code>x86_64</code>(러너 네이티브). 로컬은 arm64라 <code>--arch aarch64</code>; apko/melange 설정에서 <code>archs</code>를 빼 <code>--arch</code> 플래그로 제어.</li>
+    </ul>
+    <pre style="margin-top:16px"><code><span class="cmt"># 끝. 커밋하면 동작</span>
+<span class="kw">git</span> add .github/workflows
+<span class="kw">git</span> commit -m <span class="str">"ci: 하드닝 자동화"</span>
+<span class="kw">git</span> push      <span class="cmt"># Actions 탭에서 harden 실행 확인</span></code></pre>
+  </div>
+
+  <!-- VERIFY -->
+  <h2><span class="n">4</span> 배포측 검증 (선택, 권장)</h2>
+  <p>이미지를 쓰는 쪽에서 <b>우리 워크플로가 서명한 것만</b> 신뢰:</p>
+  <pre><code><span class="kw">cosign</span> verify ghcr.io/&lt;owner&gt;/&lt;repo&gt;-go@&lt;digest&gt; \
+  --certificate-identity-regexp <span class="str">"^https://github.com/&lt;owner&gt;/&lt;repo&gt;/.github/workflows/"</span> \
+  --certificate-oidc-issuer <span class="str">"https://token.actions.githubusercontent.com"</span></code></pre>
+  <div class="note"><div class="i">☸️</div><div><span style="font-size:14px;color:var(--muted)">Kubernetes에서 이걸 <b>강제</b>(서명 없으면 Pod 거부)하려면 Kyverno/policy-controller로 위 신원을 검사한다. 구성은 <code>docs/LOCAL-CHAINGUARD.md §5</code> 참고.</span></div></div>
+
+  <!-- TROUBLESHOOT -->
+  <h2><span class="n">5</span> 자주 막히는 곳</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th>증상</th><th>원인 / 해결</th></tr></thead>
+      <tbody>
+        <tr><td class="bad"><code>cosign sign</code> 권한 오류</td><td><code>id-token: write</code> 누락. 재사용 워크플로 호출 job에도 permissions 명시 필요</td></tr>
+        <tr><td class="bad">GHCR push 403</td><td><code>packages: write</code> 누락 또는 패키지가 다른 레포에 linked</td></tr>
+        <tr><td class="bad">melange 빌드 실패(샌드박스)</td><td><code>docker run</code>에 <code>--privileged</code> 필요 (build.yml에 포함됨)</td></tr>
+        <tr><td class="bad">trivy 게이트가 항상 실패</td><td>정상일 수 있음 — 실제 HIGH/CRIT 존재. <code>ignore-unfixed</code>/severity 정책 조정</td></tr>
+        <tr><td class="bad">SBOM attest 파일 없음</td><td>apko <code>--sbom-path</code>의 <code>sbom-x86_64.spdx.json</code> 경로/아키텍처 확인</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    image-harden · GitHub Actions 하드닝 자동화 · 2026-05-31<br>
+    build.yml · harden.yml · daily-rebuild.yml — melange → apko → trivy → cosign keyless
+  </footer>
+
+</div>
+</body>
+</html>
