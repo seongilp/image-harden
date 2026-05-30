@@ -1,0 +1,21 @@
+version: 2
+
+exposures:
+  - name: playground_dashboard
+    label: "dbt 놀이터 대시보드"
+    type: dashboard
+    maturity: high
+    url: https://github.com/seongilp/dbt-playground/blob/main/dashboard.html
+    description: >
+      6개 도메인 마트를 ECharts 차트로 보여주는 대시보드(dashboard.html).
+      이 모델들을 바꾸면 대시보드에 영향이 간다.
+    depends_on:
+      - ref('mart_image_security')
+      - ref('mart_driver_career')
+      - ref('stg_driver_standings')
+      - ref('mart_type_strength')
+      - ref('stg_pokemon')
+      - ref('mart_taxi_by_hour')
+    owner:
+      name: seongil
+      email: zihado@gmail.com
