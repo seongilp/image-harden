@@ -56,3 +56,13 @@ sign: image registry keys/cosign.key
 		COSIGN_PASSWORD="" cosign sign --yes --key keys/cosign.key \
 			--use-signing-config=false --tlog-upload=false \
 			--allow-insecure-registry $$DIGEST
+
+.PHONY: scan
+scan: naive image
+	@echo "=== trivy: $(NAIVE_IMG) ==="; trivy image -q --severity HIGH,CRITICAL $(NAIVE_IMG) || true
+	@echo "=== trivy: $(WOLFI_IMG) ==="; trivy image -q --severity HIGH,CRITICAL $(WOLFI_IMG) || true
+	@echo "=== grype: $(WOLFI_IMG) ==="; grype $(WOLFI_IMG) || true
+
+.PHONY: compare
+compare: naive image
+	./scripts/compare.sh
