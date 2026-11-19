@@ -1,0 +1,2 @@
+# 워크플로 체크아웃에 keys/ 가 없어 melange keygen(keys/melange.rsa)이 실패했다.
+# 디렉터리를 저장소에 유지해 두는 용도이며 키 자체는 커밋하지 않는다(.gitignore: keys/).
