@@ -27,7 +27,7 @@ jobs:
       matrix:
         app: [go, python, java]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3
