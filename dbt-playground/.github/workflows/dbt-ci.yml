@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0          # state 비교용 히스토리
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.4.0
         with:
           python-version: "3.12"
 
